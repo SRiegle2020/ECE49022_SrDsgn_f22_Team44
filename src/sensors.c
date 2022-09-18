@@ -27,7 +27,7 @@ void accelerometer_write(uint8_t reg, uint8_t val) {
 uint8_t accelerometer_read(uint8_t reg) {
     uint8_t accelerometer_data[1] = {reg};
     //i2c_senddata(ACCELEROMETER_ADDR, accelerometer_data, 1);
-    i2c_recvdata(ACCELEROMETER_ADDR, accelerometer_data, 1);
+    i2c_recvdata_noP(ACCELEROMETER_ADDR, accelerometer_data, 1);
     return I2C1->RXDR & 0xff;
 }
 
