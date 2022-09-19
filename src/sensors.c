@@ -44,7 +44,8 @@ uint8_t accelerometer_read(uint8_t reg) {
 //          LPF for calculations.
 //============================================================================
 void init_accelerometer(void) {
-    accelerometer_write(0x6b,0x00); //Reset
+    accelerometer_write(0x6b,0x10); //RESET EVERYTHING
+    accelerometer_write(0x68,0x02); //RESET SENSORS
     accelerometer_write(0x1c,0x10); //+-8g sensitivity
     accelerometer_write(0x1a,0x06); //Set to 20Hz DLPF
 }
@@ -53,8 +54,8 @@ void init_accelerometer(void) {
 // ACCELEROMETER_X
 //  * Read X-axis data from the accelerometer
 //============================================================================
-int accelerometer_X(void) {
-    return ((accelerometer_read(0x3b) << 8) | accelerometer_read(0x3c));
+short accelerometer_X(void) {
+    return((accelerometer_read(0x3b) << 8) | accelerometer_read(0x3c));
 }
 
 //============================================================================
@@ -62,14 +63,14 @@ int accelerometer_X(void) {
 //  * Read Y-axis data from the accelerometer
 //  * NOTE: This reads a default of 1g
 //============================================================================
-int accelerometer_Y(void) {
-    return ((accelerometer_read(0x3d) << 8) | accelerometer_read(0x3e));
+short accelerometer_Y(void) {
+    return((accelerometer_read(0x3d) << 8) | accelerometer_read(0x3e));
 }
 
 //============================================================================
 // ACCELEROMETER_Z
 //  * Read Z-axis data from the accelerometer
 //============================================================================
-int accelerometer_Z(void) {
-    return ((accelerometer_read(0x3f) << 8) | accelerometer_read(0x40));
+short accelerometer_Z(void) {
+    return((accelerometer_read(0x3f) << 8) | accelerometer_read(0x40));
 }
