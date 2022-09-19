@@ -18,16 +18,17 @@ int detect_step(void) {
     //Process the accelerometer data (convert from 16bit to +-8g).
     float ax = (float)(accelerometer_X())/4096;
     float ay = (float)(accelerometer_Y())/4096;
-    float az = (float)(accelerometer_Z())/4096 - 1;
+    float az = (float)(accelerometer_Z())/4096;
 
     //Calculate the magnitude of the current acceleration, store the old one
     float a_mag_curr;
     float a_mag_prev = a_mag_curr;
     a_mag_curr = sqrt(ax*ax + ay*ay + az*az);
+    //printf("%4.2f\n",a_mag_curr);
 
     //Check for strong rising edge
     //The >0.02 was added to cancel out any effects from turning
-    if(a_mag_curr > 1.4 && a_mag_prev < 1.4 && (a_mag_curr-a_mag_prev) > 0.02)
+    if(a_mag_curr > 1.4 && a_mag_prev < 1.4 && (a_mag_curr-a_mag_prev) > 0.1)
         return 1;
     return 0;
 }
@@ -59,13 +60,22 @@ int BMR(int weight, int height, int age, char sex) {
 //  * Assumes a sampling rate of 100Hz.
 //=============================================================================
 int f_sample = 100;
-float EE = 0;
+float EE = -1.3517;
 
 void AEE_IEEE(void) {
-    float IAA = ((float)(accelerometer_X())/4096
-               + (float)(accelerometer_Y())/4096
-               + (float)(accelerometer_Z())/4096 - 1)/f_sample;
-    EE += 13.884 * IAA - 1.3517;
+	//printf("%4.2f,%4.2f,%4.2f\n",ax,ay,az);
+	float ax = (float)(accelerometer_X())/4096;
+	float ay = (float)(accelerometer_Y())/4096;
+	float az = (float)(accelerometer_Z())/4096;
+
+	float a_mag = sqrt(ax*ax + ay*ay + az*az) - 1;
+    if(a_mag < 0)	//NOTE: Holding at an angle causes an "acceleration" of 0.37g even if not moving
+		a_mag = 0.00;
+
+    float IAA = a_mag / f_sample / 10;
+    EE += 13.884 * IAA;
+    //
+    printf("AEE: %0.2f\n",EE);
 }
 
 //=============================================================================

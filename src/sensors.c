@@ -8,7 +8,7 @@
 // DEFINITIONS FOR DEVICE ADDRESSES
 //  * This just includes the definitions for the device addresses.
 //============================================================================
-#define ACCELEROMETER_ADDR 0x68 //Since MPU6050 has the same address as the PCF8523, we have to set the A0 pin on the MPU6050 HIGH so both can be on the same I2C bus
+#define ACCELEROMETER_ADDR 0x69 //Since MPU6050 has the same address as the PCF8523, we have to set the A0 pin on the MPU6050 HIGH so both can be on the same I2C bus
 
 //============================================================================
 // ACCELEROMETER_WRITE

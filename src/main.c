@@ -16,6 +16,7 @@ void TIM6_DAC_IRQHandler(void) {
     if(detect_step())
         printf("Steps: %d\n",++steps);
     //printf("%hi %hi %hi\n",accelerometer_X(), accelerometer_Y(), accelerometer_Z());
+    AEE_IEEE();
 }
 
 void init_tim6(void) {
