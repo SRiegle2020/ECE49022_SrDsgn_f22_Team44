@@ -1,7 +1,7 @@
 /*****************************************************************************
- * This code contains functions for sending data to the serial port for      *
- * debugging without using the TFT display. Useful for sensors-to-MCU and    *
- * watch and accelerometer data subsystems.                                  *
+ * This code contains functions for interfacing with I2C devices. This will  *
+ * primarily be used by the Sensors-to-MCU and Watch and Accelerometer Data  *
+ * subsystems.																 *
  *****************************************************************************/
 #include "stm32f0xx.h"
 #include <stdio.h>
