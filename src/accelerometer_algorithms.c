@@ -59,7 +59,7 @@ int detect_step(void) {
 	//accel_sample();
 
 	//Detect if a step is past the threshold at a strong rising edge
-    if(a_mag[0] > 1.3 && a_mag[1] < 1.3 && (a_mag[0]-a_mag[1]) > 0.02)
+    if(a_mag[0] > 1.2 && a_mag[1] < 1.2 && (a_mag[0]-a_mag[1]) > 0.02)
         return 1;
     return 0;
 }
@@ -106,4 +106,17 @@ void EE_IEEE(void) {
 
 	//Print (Used for Debugging, not for actual product)
 	printf("EE: %6.2f\n",EE);
+}
+
+//=============================================================================
+// MIDNIGHT
+//	* Called periodically. Returns a 1 if time is midnight.
+//	* Used to reset counts if necessary.
+//=============================================================================
+int midnight() {
+	if(get_minutes() == 0 && get_hour() == 0) {
+		EE = 0;
+		return 1;
+	}
+	return 0;
 }

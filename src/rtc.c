@@ -140,6 +140,19 @@ void init_watch(void) {
     watch_write(0x02,0x40);                         //Standard Switch-Over, Low Detection Disabled
     int clear_oscflag = watch_read(0x03) &~ 0x80;   //Clear the Oscillator-STOP flag
     watch_write(0x03,clear_oscflag);
+
+    //NOT WORKING! MEANT TO BE A INTERRUPT
+    //May just use RTC for tracking time, and use internal timer to check stuff.
+    //Then use RTC to recalibrate if necessary
+    watch_write(0x10,0x2); 					  //Set to 1Hz Frequency Control
+    watch_write(0x11,60);  				      //Set Reload to 60 (p33 of datasheet)
+    int timAflag = watch_read(0x01) & ~0x40;  //Clear the Timer A Flag
+    timAflag |= 0x2; 						  //Enable TimA interrupt
+    watch_write(0x01,timAflag);
+
+    int clkout_ctrl = watch_read(0x0f);       //Set to pulsed interrupt, enable TimA
+    clkout_ctrl |= 0x82;
+    watch_write(0x0f,clkout_ctrl);
 }
 
 //TO-DO; Add a WATCHDOG interrupt that sends a GPIO signal once a minute. This

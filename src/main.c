@@ -18,8 +18,10 @@ void TIM6_DAC_IRQHandler(void) {
         printf("Steps: %d\n",++steps);
     //printf("%hi %hi %hi\n",accelerometer_X(), accelerometer_Y(), accelerometer_Z());
     //AEE_IEEE();
-    if(i++ == 30*60)
+    if(i++ == 30*60) {
     	EE_IEEE();
+    	i = 0;
+    }
 }
 
 void init_tim6(void) {
@@ -37,6 +39,7 @@ int main(void)
     init_i2c();
     init_usart5();
     init_watch();
+    printf("%d:%d\n",get_hour(),get_minutes());
     init_accelerometer();
     init_tim6();
     while(1) {}
