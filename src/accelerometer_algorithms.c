@@ -24,7 +24,9 @@
 
 //ASSUMES A FREQUENCY OF 30Hz
 float a_mag[1800]; 	//Table of Acceleration Magnitudes
-float EE = 0;			//Energy Expenditure
+float EE = 0;		//Energy Expenditure
+float EE_exercise = 0;
+short exercising = 0;
 
 //=============================================================================
 // ACCEL_SAMPLE
@@ -79,6 +81,22 @@ int BMR(int weight, int height, int age, char sex) {
         return (66 + (6.2 * (float)weight) + (12.7 * (float)height) - (6.76 * (float)age))*100;
     if(sex == 'F')
         return (655 + (4.35 * (float)weight) + (4.7 * (float)height) - (4.7 * (float)age))*100;
+    return -1; //If neither M nor F is passed, return -1
+}
+
+//=============================================================================
+// START_EXERCISING and END_EXERCISING
+//  * Simple void functions that update a short data type.
+//	* This will be used to determine if we are exercising or not.
+//	* Updates global variable
+//=============================================================================
+void start_exercising(void) {
+	exercising = 1;
+	EE_exercise = 0; //Reset the exercising EE counter to 0
+}
+
+void end_exercising(void) {
+	exercising = 0;
 }
 
 //=============================================================================
@@ -90,8 +108,9 @@ int BMR(int weight, int height, int age, char sex) {
 //		    11.2% of total RAM (3.6kB / 32kB).
 //  * Calculates MET using the above equation.
 //  * Then converts the MET to imperial units and finds EE for 1 minute.
+//  * Returns EE multiplied by 100 (basically keeps the lower two decimals)
 //=============================================================================
-void EE_IEEE(void) {
+int EE_IEEE(int weight) {
 	//Find fRMS
 	float sum = 0;
 	for(int i = 0; i < sizeof(a_mag)/sizeof(a_mag[0]);i++)
@@ -102,10 +121,14 @@ void EE_IEEE(void) {
 	//Calculate MET from table given
 	float MET = (1.8*fRMS - 15)/2.2;	//Divide by 2.2 for conversion to kcal/(lbs*hrs)
 	MET /= 60;							//Multiply by 1/60 to get kcal/min
-	EE += 1.05*MET*120;					//BE SURE TO ADD BMR TO THIS (homeostasis)!!!
+	EE += 1.05*MET*weight;					//BE SURE TO ADD BMR TO THIS (homeostasis)!!!
 
-	//Print (Used for Debugging, not for actual product)
-	printf("EE: %6.2f\n",EE);
+	if(exercising)
+		EE_exercise += 1.05*MET*weight;
+
+	//Convert to an Integer and Return
+	int EE_int = EE * 100;
+	return(EE_int); //Returns EE times 100
 }
 
 //=============================================================================
@@ -116,6 +139,7 @@ void EE_IEEE(void) {
 int midnight() {
 	if(get_minutes() == 0 && get_hour() == 0) {
 		EE = 0;
+		EE_exercise = 0;
 		return 1;
 	}
 	return 0;

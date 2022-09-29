@@ -19,7 +19,8 @@ void TIM6_DAC_IRQHandler(void) {
     //printf("%hi %hi %hi\n",accelerometer_X(), accelerometer_Y(), accelerometer_Z());
     //AEE_IEEE();
     if(i++ == 30*60) {
-    	EE_IEEE();
+    	int EE = EE_IEEE(120);
+    	printf("RETURNED EE: %6.2f\n",(float)EE/100);
     	i = 0;
     }
 }

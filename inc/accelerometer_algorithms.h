@@ -13,7 +13,10 @@
 #include "rtc.h"
 #include <math.h>
 
-void accel_sample(void);	//Updates the accelerometer array (1min @ 30Hz)
-int detect_step(void);		//Returns a 1 if a step (strong rising edge)
+void accel_sample(void);							//Updates the accelerometer array (1min @ 30Hz)
+int detect_step(void);								//Returns a 1 if a step (strong rising edge)
 int BMR(int weight, int height, int age, char sex);	//Calculate BMR
-void EE_IEEE(void);									//Find Energy Expended
+int EE_IEEE(int weight);							//Find Energy Expended, return EE as int (saves last two decimals)
+void start_exercising(void);						//Sets an exercising "boolean" to true
+void end_exercising(void);							//Sets an exercising "boolean" to false
+int midnight();				//Resets EE counters and returns a 1 if midnight
