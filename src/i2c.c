@@ -234,3 +234,57 @@ int i2c_recvdata_noP(uint8_t devaddr, void *data, uint8_t size) {
     return 0;
 }
 
+//============================================================================
+// I2C_RECVDATA_NOP
+//  * Read # bytes of data to the device
+//  * NOTE that this version relies on the following format:
+//    S DevAddrW Ack RegAddr Ack S DevAddrR Ack Data Ack Data Nack P
+//  * That is, there is no stop between the write/read sections. Some I2C
+//  * sensors will use a different format:
+//    S DevAddrW Ack RegAddr Ack P S DevAddrR Ack Data Ack Data Nack P
+//============================================================================
+int i2c_recvdata_noP_array(uint8_t devaddr, void *data, uint8_t size, void *reg) {
+    if(size <= 0 || data == 0 || reg == 0)          //Check conditions
+        return -1;
+    uint8_t *udata = (uint8_t*)data;    //Make sure data is uint8_t
+    uint8_t *ureg = (uint8_t*)reg;    //Make sure data is uint8_t
+    i2c_waitidle();                     //Wait until ready
+    i2c_start(devaddr, 1, 0);        //Start bit
+
+    for(int i = 0; i < 1; i++) {     //Transmit the bits
+        int count = 0;
+        while((I2C1->ISR & I2C_ISR_TXIS) == 0) {
+            count++;
+            if(count > 1000000)
+                return -1;
+            if(i2c_checknack()) {       //If NACKF set by slave device
+                i2c_clearnack();        //Clear, generate stop, return error
+                i2c_stop();
+                return -1;
+            }
+        }
+        I2C1->TXDR = ureg[i] & I2C_TXDR_TXDATA; //Send transmitted data
+    }
+    i2c_start(devaddr, size, 1);        //Start bit
+    for(int i = 0; i < size; i++) {     //Send each byte
+        int count = 0;
+        while((I2C1->ISR & I2C_ISR_RXNE) == 0) {
+            count++;
+            if(count > 1000000)         //Too long
+                return -1;
+            if(i2c_checknack()) {       //Ensure valid transmission/receive
+                i2c_clearnack();
+                i2c_stop();
+                return -1;
+            }
+        }
+        udata[i] = I2C1->RXDR;          //Store received data
+    }
+
+    //Check once more for error, then return received data
+    while((I2C1->ISR & I2C_ISR_TC) == 0 && (I2C1->ISR & I2C_ISR_NACKF) == 0);
+    if(I2C1->ISR & I2C_ISR_NACKF)
+        return -1;
+    i2c_stop();
+    return 0;
+}

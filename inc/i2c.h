@@ -13,3 +13,4 @@ void i2c_clearnack(void);   //Clear the NACK
 int i2c_senddata(uint8_t devaddr, const void *data, uint8_t size); //Send Data
 int i2c_recvdata_P(uint8_t devaddr, void *data, uint8_t size);     //Rx Data (P)
 int i2c_recvdata_noP(uint8_t devaddr, void *data, uint8_t size);   //Rx Data
+int i2c_recvdata_noP_array(uint8_t devaddr, void *data, uint8_t size, void *reg);
