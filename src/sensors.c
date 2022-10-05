@@ -9,8 +9,9 @@
 // DEFINITIONS FOR DEVICE ADDRESSES
 //  * This just includes the definitions for the device addresses.
 //============================================================================
-#define ACCELEROMETER_ADDR 	0x69 //Since MPU6050 has the same address as the PCF8523, we have to set the A0 pin on the MPU6050 HIGH so both can be on the same I2C bus
-#define PULSEOX_ADDR		    0x57 //Default
+#define ACCELEROMETER_ADDR 0x69 //Since MPU6050 has the same address as the PCF8523, we have to set the A0 pin on the MPU6050 HIGH so both can be on the same I2C bus
+#define PULSEOX_ADDR 0x57
+#define HDC_ADDR 0x40
 
 //============================================================================
 // PULSEOX_WRITE
@@ -96,7 +97,7 @@ void pulseox_check(void)
     IR &= 0x3ffff;
     int Rd = (pulseox_buf[3] << 16) | (pulseox_buf[4] << 8) | (pulseox_buf[5]);
     Rd &= 0x3ffff;
-    printf("R%6d  I%6d\n",Rd,IR);
+    //printf("R%6d  I%6d\n",Rd,IR);
 
     for(int i = 300; i > 0; i -= 2) {
     	led_arr[i]   = led_arr[i-2];
@@ -114,29 +115,37 @@ void get_spo2(void) {
     int ir_max = 0;
     int red_min = 16777216;
     int red_max = 0;
-//    for(int alsoLED = 0; alsoLED < 150; alsoLED++) {
-//        if(Red_Array[alsoLED] < red_min)
-//            red_min = Red_Array[alsoLED];
-//        if(Red_Array[alsoLED] > red_max)
-//            red_max = Red_Array[alsoLED];
-//        if(IR_Array[alsoLED] < ir_min)
-//            ir_min = IR_Array[alsoLED];
-//        if(IR_Array[alsoLED] > ir_max)
-//            ir_max = IR_Array[alsoLED];
-//    }
-//
-//    if(ir_min < 3000 || red_min < 3000) {
-//        printf("No Finger Detected\n");
-//        //return;
-//    }
 
-//    printf("%d %d %d %d\n",red_min,red_max,ir_min,ir_max);
-//    float r_AC = ((float)(ir_max - ir_min) / (float)(red_max-red_min));
-//    float r_DC = ((float)red_min / (float)(ir_min));
-//    r = r_AC * r_DC;
-//    printf("%f\n",r);
+    //red & ir min and max
+    for(int i = 0; i < 150; i++) {
+    	if(i%2 == 0){
+    		if(led_arr[i] < red_min)
+    			red_min = led_arr[i];
+    		if(led_arr[i] > red_max)
+    			red_max = led_arr[i];
+    	}
+    	else{
+            if(led_arr[i] < ir_min)
+                ir_min = led_arr[i];
+            if(led_arr[i] > ir_max)
+                ir_max = led_arr[i];
+    	}
+    }
+
+    if(ir_min < 1500 || red_min < 1500) {
+        printf("Wrist Not Detected\n");
+        return;
+    }
+    //printf("%d %d %d %d\n",red_min,red_max,ir_min,ir_max);
+
+    float r_AC = ((float)(ir_max - ir_min) / (float)(red_max - red_min));
+    float r_DC = ((float)red_min / (float)(ir_min));
+    r = r_AC * r_DC;
+    int spo2 = (float)(0.5493*r + 95.105);
+    //printf("%.4f\n",r);
+    printf("%d\n",spo2);
+    //printf("%.4f\n",spo2);
 }
-
 //============================================================================
 // ACCELEROMETER_WRITE
 //  * Send data to the accelerometer
@@ -201,3 +210,6 @@ short accelerometer_Y(void) {
 short accelerometer_Z(void) {
     return((accelerometer_read(0x3f) << 8) | accelerometer_read(0x40));
 }
+
+
+
