@@ -30,20 +30,29 @@ int tests = TEST_ALL;
 // INITIALIZE GLOBAL VARIABLES
 //	Initializes all variables that will be used for the project.
 //==============================================================================
-int  i	  	= 0;
-int  spo2  	= 98;
-int  HR		= 70;
-float tempF  = 98.8;
-int  steps 	= 0;
-int  EE_a  	= 200000;
-int  hour	= 10;
-int  minute  = 02;
+int   i	  			= 0;
+int   prev_spo2 	= 0;
+int   spo2  		= 0;
+int   prev_HR   	= 0;
+int   HR			= 0;
+float prev_tempF 	= 0;
+float tempF  		= 0;
+int   prev_steps    = 0;
+int   steps 	    = 0;
+int   prev_EE_a     = 0;
+int   EE_a  		= 0;
+int	  prev_hour     = 0;
+int   hour			= 0;
+int   prev_minute   = 0;
+int   minute  		= 0;
 
 int  ft   = 5;
 int  inch = 10;
 int  wgt  = 150;
 int  age  = 20;
 char sex = 'M';
+char string[38];
+
 void init_exti(void) {
     RCC->AHBENR  |=  RCC_AHBENR_GPIOAEN;            //Clock GPIOA
     GPIOA->MODER &= ~(GPIO_MODER_MODER0             //Configure PA0-2 as inputs
@@ -74,6 +83,8 @@ void EXTI2_3_IRQHandler(void) {
 
 void EXTI0_1_IRQHandler(void) {
     EXTI->PR |= EXTI_PR_PR0;                            //Acknowledge the interrupt
+    LCD_DrawFillRectangle(0,214,319,239,WHITE);
+    LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HEIGHT?--",12,0xff);
     if(tests & TEST_ENCODER) {
         if(!((GPIOA->IDR & 0x3)%3))
             printf("Clockwise\n");
@@ -83,8 +94,6 @@ void EXTI0_1_IRQHandler(void) {
 }
 
 void TIM6_DAC_IRQHandler(void) {
-    TIM6->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
-
     //Get SpO2 Data
     pulseox_check();
     spo2 = get_spo2();
@@ -106,6 +115,7 @@ void TIM6_DAC_IRQHandler(void) {
     	hour   = get_hour();
     	minute = get_minutes();
     }
+
     //PRINT TEST CASES TO UART
     if(tests & TEST_SPO2) {
     	if(spo2 == -1)
@@ -122,6 +132,8 @@ void TIM6_DAC_IRQHandler(void) {
     if(tests & TEST_HR)
     	printf("HR:    %d BPM\n",HR);
     i++; //Increment the counter
+
+    TIM6->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
 }
 
 void init_tim6(void) {
@@ -132,6 +144,62 @@ void init_tim6(void) {
     TIM6->DIER |= TIM_DIER_UIE;
     TIM6->CR1 |= TIM_CR1_CEN;
     NVIC->ISER[0] |= 1 << TIM6_DAC_IRQn;
+}
+
+void TIM2_IRQHandler(void) {
+	TIM6->CR1 &= ~TIM_CR1_CEN;
+    TIM2->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
+    if(minute != prev_minute | prev_spo2 != spo2 | prev_HR != HR | tempF != prev_tempF | prev_steps != steps | prev_EE_a != EE_a) {
+    	LCD_Setup();
+    	LCD_Clear(BLACK);
+		sprintf(string,"%02d:%02d",hour,minute);
+		LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+
+		if(spo2 != -1) {
+			sprintf(string,"SpO2:  %-3d   %%",spo2);
+			LCD_DrawString(26,10+16,WHITE,WHITE,string,16,0xff);
+		    sprintf(string,"HR:    %-3d   BPM",HR);
+		    LCD_DrawString(26,10+32,WHITE,WHITE,string,16,0xff);
+		} else {
+		    LCD_DrawString(26,10+16,WHITE,WHITE,"SpO2:  N/A",16,0xff);
+		    LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
+		}
+
+		sprintf(string,"Temp:  %-5.1f degF",tempF);
+		LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
+
+		sprintf(string,"Steps: %-5d Steps",steps);
+		LCD_DrawString(26,10+64,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"EE:    %-4d  Cal",EE_a/100);            //Truncate to Int
+		LCD_DrawString(26,10+80,WHITE,WHITE,string,16,0xff);
+
+		sprintf(string,"Hgt: %d'%-2d\"",ft,inch);
+		LCD_DrawString(26,10+112,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"Wgt: %-3d lbs",wgt);
+		LCD_DrawString(26,10+126,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"Age: %-3d yrs",age);
+		LCD_DrawString(26,10+142,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"Sex: %c",sex);
+		LCD_DrawString(26,10+158,WHITE,WHITE,string,16,0xff);
+
+		prev_minute = minute;
+		prev_spo2   = spo2;
+		prev_HR		= HR;
+		prev_tempF  = tempF;
+		prev_steps  = steps;
+		prev_EE_a   = EE_a;
+    }
+    TIM6->CR1 |=  TIM_CR1_CEN;
+}
+
+void init_tim2(void) {
+	//Set to update display every 5 seconds
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2->PSC = 4800  - 1;
+    TIM2->ARR = 50000 - 1;
+    TIM2->DIER |= TIM_DIER_UIE;
+    TIM2->CR1  |= TIM_CR1_CEN;
+    NVIC->ISER[0] |= 1 << TIM2_IRQn;
 }
 
 void init_lcd_spi() {
@@ -162,7 +230,7 @@ void init_spi1_slow() {
 void sdcard_io_high_speed() {
     SPI1->CR1 &= ~SPI_CR1_SPE;
     SPI1->CR1 &= ~SPI_CR1_BR;
-    //SPI1->CR1 |=  SPI_CR1_BR;
+    //SPI1->CR1 |=  SPI_CR1_BR_0;
     SPI1->CR1 |=  SPI_CR1_SPE;
 }
 
@@ -173,45 +241,16 @@ void sdcard_io_high_speed() {
 //=============================================================================
 int main(void)
 {
+    LCD_Setup();
+    LCD_Clear(BLACK);
+
 	init_i2c();
 	init_usart5();
 	pulseox_setup();
 	init_accelerometer();
 	init_exti();
 
-    LCD_Setup();
-    LCD_Clear(BLACK);
-    char string[38];
-    sprintf(string,"%02d:%02d",hour,minute);
-    LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
-    if(spo2 != -1) {
-        sprintf(string,"SpO2:  %-3d   %%",spo2);
-        LCD_DrawString(26,10+16,WHITE,WHITE,string,16,0xff);
-        sprintf(string,"HR:    %-3d   BPM",HR);
-        LCD_DrawString(26,10+32,WHITE,WHITE,string,16,0xff);
-    } else {
-        LCD_DrawString(26,10+16,WHITE,WHITE,"SpO2:  N/A",16,0xff);
-        LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
-    }
-    sprintf(string,"Temp:  %-5.1f degF",tempF);
-    LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
-    sprintf(string,"Steps: %-5d Steps",steps);
-    LCD_DrawString(26,10+64,WHITE,WHITE,string,16,0xff);
-    sprintf(string,"EE:    %-4d  Cal",EE_a/100);            //Truncate to Int
-    LCD_DrawString(26,10+80,WHITE,WHITE,string,16,0xff);
-
-    sprintf(string,"Hgt: %d'%-2d\"",ft,inch);
-    LCD_DrawString(26,10+112,WHITE,WHITE,string,16,0xff);
-    sprintf(string,"Wgt: %-3d lbs",wgt);
-    LCD_DrawString(26,10+126,WHITE,WHITE,string,16,0xff);
-    sprintf(string,"Age: %-3d yrs",age);
-    LCD_DrawString(26,10+142,WHITE,WHITE,string,16,0xff);
-    sprintf(string,"Sex: %c",sex);
-    LCD_DrawString(26,10+158,WHITE,WHITE,string,16,0xff);
-
-    LCD_DrawFillRectangle(0,214,319,239,WHITE);
-    LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HEIGHT?--",16,0xff);
-
     init_tim6();
+    init_tim2();
 	while(1);
 }
