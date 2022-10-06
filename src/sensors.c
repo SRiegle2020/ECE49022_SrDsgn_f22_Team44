@@ -109,7 +109,12 @@ void pulseox_check(void)
 
 }
 
-void get_spo2(void) {
+//============================================================================
+// GET_SPO2
+//	* Gives user SpO2 values from a regression curve calibrated to a
+//	  commercial pulse ox.
+//============================================================================
+int get_spo2(void) {
     //Calculate R Value for SpO2
     int ir_min = 16777216;
     int ir_max = 0;
@@ -133,8 +138,8 @@ void get_spo2(void) {
     }
 
     if(ir_min < 1500 || red_min < 1500) {
-        printf("Wrist Not Detected\n");
-        return;
+        //printf("Wrist Not Detected\n");
+        return(-1);
     }
     //printf("%d %d %d %d\n",red_min,red_max,ir_min,ir_max);
 
@@ -143,7 +148,8 @@ void get_spo2(void) {
     r = r_AC * r_DC;
     int spo2 = (float)(0.5493*r + 95.105);
     //printf("%.4f\n",r);
-    printf("%d\n",spo2);
+    //printf("%d\n",spo2);
+    return(spo2);
     //printf("%.4f\n",spo2);
 }
 //============================================================================

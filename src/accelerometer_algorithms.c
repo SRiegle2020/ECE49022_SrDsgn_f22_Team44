@@ -128,8 +128,8 @@ int EE_IEEE(int weight) {
 
 	//Convert to an Integer and Return
 	int EE_int = EE * 100;
-	printf("fRMS: 				%6.2f\n",fRMS);
-	printf("MET in kCal/min*lb: %6.2f\n",MET);
+//	printf("fRMS: 				%6.2f\n",fRMS);
+//	printf("MET in kCal/min*lb: %6.2f\n",MET);
 	return(EE_int); //Returns EE times 100
 }
 
