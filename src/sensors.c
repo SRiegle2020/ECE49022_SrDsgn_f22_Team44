@@ -9,9 +9,39 @@
 // DEFINITIONS FOR DEVICE ADDRESSES
 //  * This just includes the definitions for the device addresses.
 //============================================================================
-#define ACCELEROMETER_ADDR 0x69 //Since MPU6050 has the same address as the PCF8523, we have to set the A0 pin on the MPU6050 HIGH so both can be on the same I2C bus
-#define PULSEOX_ADDR 0x57
-#define HDC_ADDR 0x40
+#define ACCELEROMETER_ADDR 	0x69 //Since MPU6050 has the same address as the PCF8523, we have to set the A0 pin on the MPU6050 HIGH so both can be on the same I2C bus
+#define PULSEOX_ADDR 		0x57
+#define HDC_ADDR 			0x40
+
+//============================================================================
+// TEMP_WRITE
+//  * Send data to the temp sensor
+//  * Used mainly for configuration
+//============================================================================
+void temp_write(uint8_t reg, uint8_t val) {
+	uint8_t temp_writedata[2] = {reg, val};
+	i2c_senddata(HDC_ADDR, temp_writedata,2);
+}
+
+//============================================================================
+// TEMP_SIMPLE_READ
+//  * Read a single byte from the temp sensor.
+//============================================================================
+uint8_t temp_simple_read(uint8_t reg) {
+    uint8_t temp_data[1] = {reg};
+    i2c_recvdata_noP(HDC_ADDR, temp_data, 1);
+    return I2C1->RXDR & 0xff;
+}
+
+//============================================================================
+// TEMP_READ_ARRAY
+//  * Read individual data from the temp sensor.
+//  * Result is stored into the data buffer
+//============================================================================
+void temp_read_array(uint8_t loc, char data[], uint8_t len) {
+    uint8_t reg[1] = { loc };
+    i2c_recvdata_noP_array(HDC_ADDR,data,len,reg);              //Read data
+}
 
 //============================================================================
 // PULSEOX_WRITE
@@ -75,14 +105,14 @@ float r;
 //============================================================================
 void pulseox_check(void)
 {
-  //Read register FIDO_DATA in (3-byte * number of active LED) chunks
-  //Until FIFO_RD_PTR = FIFO_WR_PTR
-  uint8_t readPointer  = pulseox_simple_read(0x06);
-  uint8_t writePointer = pulseox_simple_read(0x04);
+    //Read register FIDO_DATA in (3-byte * number of active LED) chunks
+    //Until FIFO_RD_PTR = FIFO_WR_PTR
+    uint8_t readPointer  = pulseox_simple_read(0x06);
+    uint8_t writePointer = pulseox_simple_read(0x04);
 
-  int numberOfSamples = 0;
+    int numberOfSamples = 0;
 
-  //Do we have new data?
+    //Do we have new data?
     //Calculate the number of readings we need to get from sensor
     numberOfSamples = writePointer - readPointer;
     if (numberOfSamples < 0) numberOfSamples += 32; //Wrap condition
@@ -105,10 +135,10 @@ void pulseox_check(void)
     }
     led_arr[0] = Rd;
     led_arr[1] = IR;
-
-
 }
 
+int red_avg;
+int red_min;
 //============================================================================
 // GET_SPO2
 //	* Gives user SpO2 values from a regression curve calibrated to a
@@ -118,12 +148,13 @@ int get_spo2(void) {
     //Calculate R Value for SpO2
     int ir_min = 16777216;
     int ir_max = 0;
-    int red_min = 16777216;
+    red_min = 16777216;
     int red_max = 0;
-
+    red_avg = 0;
     //red & ir min and max
-    for(int i = 0; i < 150; i++) {
+    for(int i = 0; i < 300; i++) {
     	if(i%2 == 0){
+    		red_avg += led_arr[i];
     		if(led_arr[i] < red_min)
     			red_min = led_arr[i];
     		if(led_arr[i] > red_max)
@@ -136,12 +167,14 @@ int get_spo2(void) {
                 ir_max = led_arr[i];
     	}
     }
+    red_avg /= 150;
 
     if(ir_min < 1500 || red_min < 1500) {
         //printf("Wrist Not Detected\n");
         return(-1);
     }
-    //printf("%d %d %d %d\n",red_min,red_max,ir_min,ir_max);
+
+    //printf("%d %d %d\n",red_min,red_avg,red_max);
 
     float r_AC = ((float)(ir_max - ir_min) / (float)(red_max - red_min));
     float r_DC = ((float)red_min / (float)(ir_min));
@@ -152,6 +185,51 @@ int get_spo2(void) {
     return(spo2);
     //printf("%.4f\n",spo2);
 }
+
+//
+int count = 0;
+int sampl_hr[7] = {70,70,70,70,70,70,70};
+int hr_avg;
+//============================================================================
+// GET_HR
+//	* Gives user HR. Works by looking for a peak (one value surrounded by
+//	  several smaller values. Then, takes average of last few samples to
+//	  consider noise and bad measurements.
+//============================================================================
+int get_HR(void) {
+	//Check if at a peak
+	if(led_arr[8] > led_arr[0] && led_arr[8] > led_arr[2]
+	  && led_arr[8] > led_arr[4]
+	  && led_arr[8] > led_arr[6]
+	  && led_arr[8] > led_arr[14]
+	  && led_arr[8] > led_arr[16]
+	  && led_arr[8] > red_avg) {
+
+		//Check for realistic pulses
+		// [36BPM to 120BPM]
+		// Realistically, people are unlikely to have values that surpass
+		// these without being in the hospital.
+		if(count > 15 && count < 50 && red_min > 1500) {
+
+			//Find average HR for last 7 samples
+			hr_avg = 0;
+			for(int i = 6; i > 0; i--) {
+				hr_avg += sampl_hr[i];
+				sampl_hr[i] = sampl_hr[i-1];
+			}
+			sampl_hr[0] = 1800/count;
+			hr_avg += sampl_hr[0];
+			//printf("Heart Rate: %d\n",hr_avg/10);
+		}
+	    //printf("Time: %d\n",count);
+   	count = 0;
+    }
+
+	//Reset the counter and return the final heartrate
+    count++;
+	return(hr_avg/7);
+}
+
 //============================================================================
 // ACCELEROMETER_WRITE
 //  * Send data to the accelerometer
@@ -216,6 +294,3 @@ short accelerometer_Y(void) {
 short accelerometer_Z(void) {
     return((accelerometer_read(0x3f) << 8) | accelerometer_read(0x40));
 }
-
-
-

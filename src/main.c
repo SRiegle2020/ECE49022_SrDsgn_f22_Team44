@@ -19,7 +19,8 @@
 #define TEST_STEP  	0x02
 #define TEST_EE		0x04
 #define TEST_TIME	0x10
-#define TEST_ALL    TEST_SPO2 | TEST_STEP | TEST_EE | TEST_TIME
+#define TEST_HR		0x20
+#define TEST_ALL    TEST_SPO2 | TEST_STEP | TEST_EE | TEST_TIME | TEST_HR
 
 //IMPORTANT ==> Change this to change what tests you are running with the UART
 int tests = TEST_ALL;
@@ -30,6 +31,7 @@ int tests = TEST_ALL;
 //==============================================================================
 int i	  	= 0;
 int spo2  	= 0;
+int HR		= 70;
 int steps 	= 0;
 int EE_a  	= 0;
 int time	= 0;
@@ -40,6 +42,7 @@ void TIM6_DAC_IRQHandler(void) {
     //Get SpO2 Data
     pulseox_check();
     spo2 = get_spo2();
+    HR   = get_HR();
 
     //Get Steps
     accel_sample();
@@ -61,14 +64,16 @@ void TIM6_DAC_IRQHandler(void) {
     	if(spo2 == -1)
     		printf("WRIST NOT DETECTED\n");
 		else
-			printf("SPO2: %d%%\n",spo2);
+			printf("SPO2:  %d%%\n",spo2);
     }
     if(tests & TEST_STEP)
     	printf("STEPS: %d\n",steps);
     if(tests & TEST_EE)
-    	printf("EE: %6.2f\n",(float)EE_a/100);
+    	printf("EE:    %.2f\n",(float)EE_a/100);
     if(tests & TEST_TIME)
     	printf("TIME: %d%d:%d%d\n",time/1000,(time/100)%10,(time%100)/10,time%10);
+    if(tests & TEST_HR)
+    	printf("HR:    %d BPM\n",HR);
     i++; //Increment the counter
 }
 

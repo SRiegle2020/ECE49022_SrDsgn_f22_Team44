@@ -12,6 +12,7 @@ void pulseox_read_array(uint8_t loc, char data[], uint8_t len);
 void pulseox_setup(void);
 void pulseox_check(void);
 int get_spo2(void);
+int get_HR(void);
 void accelerometer_write(uint8_t reg, uint8_t val); //Write to the Accelerometer
 void init_accelerometer(void);                      //Configure the Accelerometer
 uint8_t accelerometer_read(uint8_t reg);            //Read from the Accelerometer
