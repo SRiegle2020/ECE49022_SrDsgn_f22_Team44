@@ -35,8 +35,8 @@ int   prev_spo2 	= 0;
 int   spo2  		= 0;
 int   prev_HR   	= 0;
 int   HR			= 0;
-float prev_tempF 	= 0;
-float tempF  		= 0;
+float  prev_tempF 	= 0;
+float  tempF  		= 0;
 int   prev_steps    = 0;
 int   steps 	    = 0;
 int   prev_EE_a     = 0;
@@ -52,6 +52,14 @@ int  wgt  = 150;
 int  age  = 20;
 char sex = 'M';
 char string[38];
+
+int mode = 0;
+
+static inline void nano_wait(unsigned int n) {
+    asm(    "        mov r0,%0\n"
+            "repeat: sub r0,#83\n"
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
 
 void init_exti(void) {
     RCC->AHBENR  |=  RCC_AHBENR_GPIOAEN;            //Clock GPIOA
@@ -75,16 +83,200 @@ void init_exti(void) {
     NVIC->ISER[0] = 1 << EXTI2_3_IRQn;  //Enable the interrupts
 }
 
+//==============================================================================
+// EXTI2_3_IRQHandler
+//  * Uses an EXTI for PA2 to detect if the encoder button was pressed.
+//  * Cycles through the different configuration settings before returning to
+//    display.
+//==============================================================================
 void EXTI2_3_IRQHandler(void) {
     EXTI->PR |= EXTI_PR_PR2;                            //Acknowledge the interrupt
+    TIM6->CR1 &= ~TIM_CR1_CEN;
+    TIM2->CR1 &= ~TIM_CR1_CEN;
+    mode++;
+    nano_wait(100000000); //Add a delay to account for "double presses"
+    //Change modes
+    if(mode == 1) {
+        LCD_Setup();
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HGT (FEET)--",16,0xff);
+        sprintf(string,"%d'",ft);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 2) {
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HGT (INCH)--",16,0xff);
+        sprintf(string,"%2d'",inch);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 3) {
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST WGT--",16,0xff);
+        sprintf(string,"%d lbs",wgt);
+        LCD_DrawString(260,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 4) {
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST AGE--",16,0xff);
+        sprintf(string,"%d yrs",age);
+        LCD_DrawString(260,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 5) {
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST SEX--",16,0xff);
+        sprintf(string,"%c",sex);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 6) {
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (HRS)--",16,0xff);
+        sprintf(string,"%2d:%2d",hour,minute);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 7) {
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (MIN)--",16,0xff);
+        sprintf(string,"%2d:%2d",hour,minute);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+
+    //If done editing, redraw entire thing
+    } else {
+        mode = 0;
+        set_hours(hour);
+        set_minutes(minute);
+        LCD_Setup();
+        LCD_Clear(BLACK);
+        sprintf(string,"%02d:%02d",hour,minute);
+        LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+
+        if(spo2 != -1) {
+            sprintf(string,"SpO2:  %-3d   %%",spo2);
+            LCD_DrawString(26,10+16,WHITE,WHITE,string,16,0xff);
+            sprintf(string,"HR:    %-3d   BPM",HR);
+            LCD_DrawString(26,10+32,WHITE,WHITE,string,16,0xff);
+        } else {
+            LCD_DrawString(26,10+16,WHITE,WHITE,"SpO2:  N/A",16,0xff);
+            LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
+        }
+
+        sprintf(string,"Temp:  %-5.1f degF",tempF);
+        LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
+
+        sprintf(string,"Steps: %-5d Steps",steps);
+        LCD_DrawString(26,10+64,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"EE:    %-4d  Cal",EE_a/100);            //Truncate to Int
+        LCD_DrawString(26,10+80,WHITE,WHITE,string,16,0xff);
+
+        sprintf(string,"Hgt: %d'%2d\"",ft,inch);
+        LCD_DrawString(26,10+112,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"Wgt: %-3d lbs",wgt);
+        LCD_DrawString(26,10+126,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"Age: %-3d yrs",age);
+        LCD_DrawString(26,10+142,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"Sex: %c",sex);
+        LCD_DrawString(26,10+158,WHITE,WHITE,string,16,0xff);
+
+        //Update previous values
+        prev_minute = minute;
+        prev_spo2   = spo2;
+        prev_HR     = HR;
+        prev_tempF  = tempF;
+        prev_steps  = steps;
+        prev_EE_a   = EE_a;
+
+        TIM6->CR1 |= TIM_CR1_CEN;
+        TIM2->CR1 |= TIM_CR1_CEN;
+    }
+
+    //Used for UART Debugging
     if(tests & TEST_ENCODER)
         printf("Button Released\n");
+
 }
 
+//==============================================================================
+// EXTI0_1_IRQHandler
+//  * Uses an EXTI for PA0 and PA1 to detect whether encoder is rotated.
+//  * Changes settings based off of different modes.
+//==============================================================================
 void EXTI0_1_IRQHandler(void) {
-    EXTI->PR |= EXTI_PR_PR0;                            //Acknowledge the interrupt
-    LCD_DrawFillRectangle(0,214,319,239,WHITE);
-    LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HEIGHT?--",12,0xff);
+    EXTI->PR |= EXTI_PR_PR0; //Acknowledge the interrupt
+    int increment;
+    if(!((GPIOA->IDR & 0x3)%3))
+        increment = 1;
+    else
+        increment = -1;
+
+    if(mode == 1) {
+        ft += increment;
+        //Keep values in the range [0,9]
+        if(ft < 0)
+            ft = 0;
+        if(ft > 9)
+            ft = 9;
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HGT (FEET)--",16,0xff);
+        sprintf(string,"%d'",ft);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 2) {
+        inch += increment;
+        //Keep values in the range [0,12)
+        if(inch < 0)
+            inch = 0;
+        if(inch > 11)
+            inch = 11;
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HGT (INCH)--",16,0xff);
+        sprintf(string,"%2d'",inch);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 3) {
+        wgt += increment;
+        if(wgt < 50)  //Keep values in range [50,600] to account for kids and
+                      //very big people
+            wgt = 50;
+        if(wgt > 600)
+            wgt = 600;
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST WGT--",16,0xff);
+        sprintf(string,"%d lbs",wgt);
+        LCD_DrawString(260,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 4) {
+        age += increment;
+        if(age < 0)     //Limit ages to [0,110]
+            age = 0;
+        if(age > 110)
+            age = 110;
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST AGE--",16,0xff);
+        sprintf(string,"%d yrs",age);
+        LCD_DrawString(260,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 5) {
+        if(sex == 'M')
+            sex = 'F';
+        else
+            sex = 'M';
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST SEX--",16,0xff);
+        sprintf(string,"%c",sex);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    } else if(mode == 6) {
+        hour += increment;
+        if(hour > 23)
+            hour = 0;
+        if(hour < 0)
+            hour = 23;
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (HRS)--",16,0xff);
+        sprintf(string,"%2d:%2d",hour,minute);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+        //TimeHr
+    } else if(mode == 7) {
+        //TimMin
+        minute += increment;
+        if(minute > 59)
+            minute = 0;
+        if(minute < 0)
+            minute = 59;
+        LCD_DrawFillRectangle(0,214,319,239,WHITE);
+        LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (MIN)--",16,0xff);
+        sprintf(string,"%2d:%2d",hour,minute);
+        LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+    }
+
     if(tests & TEST_ENCODER) {
         if(!((GPIOA->IDR & 0x3)%3))
             printf("Clockwise\n");
@@ -93,6 +285,11 @@ void EXTI0_1_IRQHandler(void) {
     }
 }
 
+//==============================================================================
+// TIM6_DAC_IRQHandler
+//  * Samples all sensors @ 30Hz.
+//  * Also has UART debugging.
+//==============================================================================
 void TIM6_DAC_IRQHandler(void) {
     //Get SpO2 Data
     pulseox_check();
@@ -106,7 +303,7 @@ void TIM6_DAC_IRQHandler(void) {
 
     //Once a minute, update the EE counter
     if(i == 30*60) {
-    	EE_a = EE_IEEE(120);
+    	EE_a = EE_IEEE(wgt);
         i = 0;
     }
 
@@ -136,6 +333,7 @@ void TIM6_DAC_IRQHandler(void) {
     TIM6->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
 }
 
+
 void init_tim6(void) {
 	//Set to 30Hz sampling
     RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
@@ -146,14 +344,28 @@ void init_tim6(void) {
     NVIC->ISER[0] |= 1 << TIM6_DAC_IRQn;
 }
 
+//==============================================================================
+// TIM2_IRQHandler
+//  * Updates display once every 5 seconds.
+//  * Wanted to continually update if changes detected, but sensors take so long
+//    that LCD won't work without pausing timers, resetting the display, and
+//    redrawing everything.
+//==============================================================================
 void TIM2_IRQHandler(void) {
 	TIM6->CR1 &= ~TIM_CR1_CEN;
     TIM2->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
+    nano_wait(100000000);
     if(minute != prev_minute | prev_spo2 != spo2 | prev_HR != HR | tempF != prev_tempF | prev_steps != steps | prev_EE_a != EE_a) {
     	LCD_Setup();
     	LCD_Clear(BLACK);
 		sprintf(string,"%02d:%02d",hour,minute);
 		LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+
+		//Reset values at midnight
+		if(midnight()) {
+		    steps = 0;
+		    EE_a  = 0;
+		}
 
 		if(spo2 != -1) {
 			sprintf(string,"SpO2:  %-3d   %%",spo2);
