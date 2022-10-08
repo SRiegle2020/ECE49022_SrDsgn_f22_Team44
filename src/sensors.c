@@ -18,9 +18,9 @@
 //  * Send data to the temp sensor
 //  * Used mainly for configuration
 //============================================================================
-void temp_write(uint8_t reg, uint8_t val) {
-	uint8_t temp_writedata[2] = {reg, val};
-	i2c_senddata(HDC_ADDR, temp_writedata,2);
+void temp_write(uint8_t reg0, uint8_t val0, uint8_t val1) {
+	uint8_t temp_writedata[4] = {reg0,val0,val1};
+	i2c_senddata(HDC_ADDR, temp_writedata,3);
 }
 
 //============================================================================
@@ -40,7 +40,39 @@ uint8_t temp_simple_read(uint8_t reg) {
 //============================================================================
 void temp_read_array(uint8_t loc, char data[], uint8_t len) {
     uint8_t reg[1] = { loc };
+
     i2c_recvdata_noP_array(HDC_ADDR,data,len,reg);              //Read data
+}
+
+//============================================================================
+// INIT_TEMP_SENSOR
+//  * Configures the temperature sensor to measure temperature only
+//	  (not humidity).
+//============================================================================
+void init_temp_sensor(void) {
+	temp_write(0x2,0x0,0x0);
+}
+
+static inline void nano_wait(unsigned int n) {
+    asm(    "        mov r0,%0\n"
+            "repeat: sub r0,#83\n"
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
+
+//============================================================================
+// GET_TEMP
+//	* Reads temperature and returns in F.
+//    NOTE: Sensor returns 10*tempF. Also, needs a nanowait between setting
+//          the pointer and reading the value.
+//============================================================================
+int get_temp(void) {
+	i2c_senddata(HDC_ADDR,0x02,1); //Set pointer
+	nano_wait(20000000);		   //Datasheet requires waiting 20ms
+	char temp_arr[2];
+	i2c_recvdata_P(HDC_ADDR,temp_arr,2);
+	int   temp_16 = (temp_arr[0] << 8) | (temp_arr[1]);
+	float temp_C  = ((float)temp_16 /(float)65536) * 160 - 40; //Convert 16bit to C
+	return(18*temp_C + 320);									   //Convert to 10*F
 }
 
 //============================================================================
@@ -179,7 +211,7 @@ int get_spo2(void) {
     float r_AC = ((float)(ir_max - ir_min) / (float)(red_max - red_min));
     float r_DC = ((float)red_min / (float)(ir_min));
     r = r_AC * r_DC;
-    int spo2 = (float)(0.5493*r + 95.105);
+    int spo2 = (float)(0.5493*r + 96.105);
     //printf("%.4f\n",r);
     //printf("%d\n",spo2);
     return(spo2);

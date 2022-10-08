@@ -21,10 +21,11 @@
 #define TEST_TIME	0x10
 #define TEST_HR	    0x20
 #define TEST_ENCODER 0x40
+#define TEST_TEMP	0x80
 #define TEST_ALL    TEST_SPO2 | TEST_STEP | TEST_EE | TEST_TIME | TEST_HR | TEST_ENCODER
 
 //IMPORTANT ==> Change this to change what tests you are running with the UART
-int tests = TEST_ALL;
+int tests = TEST_TEMP;
 
 //==============================================================================
 // INITIALIZE GLOBAL VARIABLES
@@ -35,8 +36,8 @@ int   prev_spo2 	= 0;
 int   spo2  		= 0;
 int   prev_HR   	= 0;
 int   HR			= 0;
-float  prev_tempF 	= 0;
-float  tempF  		= 0;
+int   prev_tempF 	= 0;
+int   tempF  		= 0;
 int   prev_steps    = 0;
 int   steps 	    = 0;
 int   prev_EE_a     = 0;
@@ -66,6 +67,7 @@ void init_exti(void) {
     GPIOA->MODER &= ~(GPIO_MODER_MODER0             //Configure PA0-2 as inputs
                     | GPIO_MODER_MODER1
                     | GPIO_MODER_MODER2);
+    GPIOA->MODER |= GPIO_MODER_MODER5_0;            //Set PA5 to output
     GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR0             //Set PUPDR
                     | GPIO_PUPDR_PUPDR1);
     GPIOA->PUPDR |=  (GPIO_PUPDR_PUPDR0_0
@@ -81,6 +83,18 @@ void init_exti(void) {
 
     NVIC->ISER[0] = 1 << EXTI0_1_IRQn;
     NVIC->ISER[0] = 1 << EXTI2_3_IRQn;  //Enable the interrupts
+}
+
+//============================================================================
+// CHECK_VITALS
+//  * Check if user vitals are healthy. If not, play alert tone.
+//============================================================================
+void check_vitals(void) {
+	if(tempF > 991 || (spo2 < 95 && spo2 > -1) || HR < 60 || HR > 100)
+		GPIOA->ODR |=  0x20;
+	else
+		GPIOA->ODR &= ~0x20;
+	return;
 }
 
 //==============================================================================
@@ -153,7 +167,7 @@ void EXTI2_3_IRQHandler(void) {
             LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
         }
 
-        sprintf(string,"Temp:  %-5.1f degF",tempF);
+        sprintf(string,"Temp:  %d.%d degF",tempF/10,tempF%10);
         LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
 
         sprintf(string,"Steps: %-5d Steps",steps);
@@ -307,11 +321,18 @@ void TIM6_DAC_IRQHandler(void) {
         i = 0;
     }
 
+    //Get the temperature
+    tempF = get_temp();
+    if(tests & TEST_TEMP)
+    	printf("Temp: %d.%dF\n",tempF/10,tempF%10);
+
     //Get the time
     if(!(i%10)) {//Update @ 3Hz (no need to continually update it)
     	hour   = get_hour();
     	minute = get_minutes();
     }
+
+    check_vitals();
 
     //PRINT TEST CASES TO UART
     if(tests & TEST_SPO2) {
@@ -377,7 +398,7 @@ void TIM2_IRQHandler(void) {
 		    LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
 		}
 
-		sprintf(string,"Temp:  %-5.1f degF",tempF);
+		sprintf(string,"Temp:  %d.%d  degF",tempF/10,tempF%10);
 		LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
 
 		sprintf(string,"Steps: %-5d Steps",steps);
@@ -459,10 +480,12 @@ int main(void)
 	init_i2c();
 	init_usart5();
 	pulseox_setup();
+	init_temp_sensor();
 	init_accelerometer();
 	init_exti();
 
     init_tim6();
     init_tim2();
+
 	while(1);
 }
