@@ -14,15 +14,16 @@
 // DEFINE TEST CASES
 //	Will be useful if needing UART debugging
 //==============================================================================
-#define TEST_NONE	0x00
-#define TEST_SPO2 	0x01
-#define TEST_STEP  	0x02
-#define TEST_EE		0x04
-#define TEST_TIME	0x10
-#define TEST_HR	    0x20
+#define TEST_NONE	 0x00
+#define TEST_SPO2 	 0x01
+#define TEST_STEP    0x02
+#define TEST_EE		 0x04
+#define TEST_TIME	 0x10
+#define TEST_HR	     0x20
 #define TEST_ENCODER 0x40
-#define TEST_TEMP	0x80
-#define TEST_ALL    TEST_SPO2 | TEST_STEP | TEST_EE | TEST_TIME | TEST_HR | TEST_ENCODER
+#define TEST_TEMP	 0x80
+#define TEST_AUDIO   0x100
+#define TEST_ALL    TEST_SPO2 | TEST_STEP | TEST_EE | TEST_TIME | TEST_HR | TEST_ENCODER | TEST_AUDIO
 
 //IMPORTANT ==> Change this to change what tests you are running with the UART
 int tests = TEST_TEMP;
@@ -90,10 +91,13 @@ void init_exti(void) {
 //  * Check if user vitals are healthy. If not, play alert tone.
 //============================================================================
 void check_vitals(void) {
-	if(tempF > 991 || (spo2 < 95 && spo2 > -1) || HR < 60 || HR > 100)
-		GPIOA->ODR |=  0x20;
+	if((tempF > 991 || (spo2 < 95) || HR < 60 || HR > 100) && spo2 > 0)
+		TIM7->CR1 |=  TIM_CR1_CEN;
 	else
-		GPIOA->ODR &= ~0x20;
+		TIM7->CR1 &= ~TIM_CR1_CEN;
+
+	if(tests & TEST_AUDIO)
+		TIM7->CR1 |=  TIM_CR1_CEN;
 	return;
 }
 
@@ -299,6 +303,25 @@ void EXTI0_1_IRQHandler(void) {
     }
 }
 
+void init_tim7(void) {
+	//Set to 660Hz audio (toggle at 330Hz)
+    RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+    TIM7->PSC = 360 - 1;
+    TIM7->ARR = 101 - 1;
+    TIM7->DIER |= TIM_DIER_UIE;
+    NVIC->ISER[0] |= 1 << TIM7_IRQn;
+}
+
+//==============================================================================
+// Simulates a crummy sine wave
+//==============================================================================
+void TIM7_IRQHandler(void) {
+	TIM7->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
+	if(GPIOA->ODR & 0x20)
+		GPIOA->ODR &= ~0x20;
+	else
+		GPIOA->ODR |=  0x20;
+}
 //==============================================================================
 // TIM6_DAC_IRQHandler
 //  * Samples all sensors @ 30Hz.
@@ -486,6 +509,7 @@ int main(void)
 
     init_tim6();
     init_tim2();
+    init_tim7();
 
 	while(1);
 }
