@@ -1,0 +1,11 @@
+Ref,Val,Package,PosX,PosY,Rot,Side
+"D2","LED_Small","LED_0603_1608Metric",-28.387600,-16.677400,90.000000,bottom
+"D3","LED_Small","LED_0603_1608Metric",-26.101600,-16.677400,90.000000,bottom
+"J6","USB_C_Receptacle_USB2.0","USB_C_Receptacle_XKB_U262-16XN-4BVC11",-19.365000,-20.538200,90.000000,bottom
+"J7","Conn_01x02","JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal",-29.794000,-49.076200,180.000000,bottom
+"J8","Conn_01x02","JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal",-22.123200,-49.076200,180.000000,bottom
+"Q2","BC547","TO-92_Inline",-27.172800,-23.789400,-90.000000,bottom
+"SW1","RotaryEncoder_Switch","RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles",-31.017790,-33.227400,180.000000,bottom
+"SW2","Reset","SW_SPST_Omron_B3FS-101xP",-106.721200,-52.339000,180.000000,bottom
+"SW3","SW_SPST","SW_DIP_SPSTx01_Slide_Copal_CHS-01B_W7.62mm_P1.27mm",-30.876800,-20.081000,-90.000000,bottom
+"U3","CR2013-MI2120","CR2013-MI2120",-34.483600,-45.684200,0.000000,bottom

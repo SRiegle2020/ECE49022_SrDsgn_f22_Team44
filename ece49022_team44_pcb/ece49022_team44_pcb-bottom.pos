@@ -1,0 +1,16 @@
+### Module positions - created on Thu Oct 13 12:32:48 2022 ###
+### Printed by Pcbnew version (6.0.4)
+## Unit = mm, Angle = deg.
+## Side : bottom
+# Ref     Val                      Package                                                                    PosX       PosY       Rot  Side
+D2        LED_Small                LED_0603_1608Metric                                                    -28.3876   -16.6774   90.0000  bottom
+D3        LED_Small                LED_0603_1608Metric                                                    -26.1016   -16.6774   90.0000  bottom
+J6        USB_C_Receptacle_USB2.0  USB_C_Receptacle_XKB_U262-16XN-4BVC11                                  -19.3650   -20.5382   90.0000  bottom
+J7        Conn_01x02               JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal                                -29.7940   -49.0762  180.0000  bottom
+J8        Conn_01x02               JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal                                -22.1232   -49.0762  180.0000  bottom
+Q2        BC547                    TO-92_Inline                                                           -27.1728   -23.7894  -90.0000  bottom
+SW1       RotaryEncoder_Switch     RotaryEncoder_Alps_EC11E-Switch_Vertical_H20mm_CircularMountingHoles   -31.0178   -33.2274  180.0000  bottom
+SW2       Reset                    SW_SPST_Omron_B3FS-101xP                                              -106.7212   -52.3390  180.0000  bottom
+SW3       SW_SPST                  SW_DIP_SPSTx01_Slide_Copal_CHS-01B_W7.62mm_P1.27mm                     -30.8768   -20.0810  -90.0000  bottom
+U3        CR2013-MI2120            CR2013-MI2120                                                          -34.4836   -45.6842    0.0000  bottom
+## End

@@ -1,4 +1,4 @@
-Comment,Designator,Footprint,LCSC Part Number
+Comment,Designator,Footprint,LCSC PART NUMBER
 10n,"C1,C2",Capacitor_SMD:C_0201_0603Metric,C285010
 33uF,C19,Capacitor_Tantalum_SMD:CP_EIA-3528-21_Kemet-B,C723311
 22uF,"C21,C22",Capacitor_SMD:C_0402_1005Metric,C415703
