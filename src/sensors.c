@@ -211,7 +211,7 @@ int get_spo2(void) {
     float r_AC = ((float)(ir_max - ir_min) / (float)(red_max - red_min));
     float r_DC = ((float)red_min / (float)(ir_min));
     r = r_AC * r_DC;
-    int spo2 = (float)(0.5493*r + 96.105);
+    int spo2 = (float)(-3.1339*r + 99);
     //printf("%.4f\n",r);
     //printf("%d\n",spo2);
     return(spo2);

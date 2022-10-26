@@ -22,6 +22,8 @@
 #include "accelerometer_algorithms.h"
 #include <math.h>
 
+#define CS_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_8; } while(0)
+
 //ASSUMES A FREQUENCY OF 30Hz
 float a_mag[1800]; 	//Table of Acceleration Magnitudes
 float EE = 0;		//Energy Expenditure
@@ -118,9 +120,9 @@ int EE_IEEE(int weight) {
 	sum /= (sizeof(a_mag)/sizeof(a_mag[0]));
 	float fRMS = sqrt(sum);
 
-	//Calculate MET from table given
-	float MET = (1.8*fRMS - 15)/2.2;	//Divide by 2.2 for conversion to kcal/(lbs*hrs)
-	MET /= 60;							//Multiply by 1/60 to get kcal/min
+	//Calculate MET using regression model
+	float MET = (1.1278*fRMS - 9.5074)/2.2;	//Divide by 2.2 for conversion to kcal/(lbs*hrs)
+	MET /= 60;							    //Multiply by 1/60 to get kcal/min
 	EE += 1.05*MET*weight;					//BE SURE TO ADD BMR TO THIS (homeostasis)!!!
 
 	if(exercising)

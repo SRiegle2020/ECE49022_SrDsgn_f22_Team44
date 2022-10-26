@@ -6,6 +6,11 @@
 #include <stdio.h>
 #include "i2c.h"
 
+void temp_write(uint8_t reg0, uint8_t val0, uint8_t val1);
+uint8_t temp_simple_read(uint8_t reg);
+void temp_read_array(uint8_t loc, char data[], uint8_t len);
+void init_temp_sensor(void);
+int get_temp(void);
 void pulseox_write(uint8_t reg, uint8_t val);
 uint8_t pulseox_simple_read(uint8_t reg);
 void pulseox_read_array(uint8_t loc, char data[], uint8_t len);

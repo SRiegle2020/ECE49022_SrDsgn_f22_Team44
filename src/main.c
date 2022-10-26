@@ -10,6 +10,8 @@
 #include "sensors.h"
 #include "lcd.h"
 
+#define NO_INIT_GCC __attribute__ ((section (".noinit")))
+
 //==============================================================================
 // DEFINE TEST CASES
 //	Will be useful if needing UART debugging
@@ -24,9 +26,10 @@
 #define TEST_TEMP	 0x80
 #define TEST_AUDIO   0x100
 #define TEST_ALL    TEST_SPO2 | TEST_STEP | TEST_EE | TEST_TIME | TEST_HR | TEST_ENCODER | TEST_AUDIO
+#define CS_HIGH do { GPIOB->BSRR = GPIO_BSRR_BS_8; } while(0)
 
 //IMPORTANT ==> Change this to change what tests you are running with the UART
-int tests = TEST_TEMP;
+int tests = TEST_NONE;
 
 //==============================================================================
 // INITIALIZE GLOBAL VARIABLES
@@ -48,12 +51,12 @@ int   hour			= 0;
 int   prev_minute   = 0;
 int   minute  		= 0;
 
-int  ft   = 5;
-int  inch = 10;
-int  wgt  = 150;
-int  age  = 20;
-char sex = 'M';
-char string[38];
+static int  ft   NO_INIT_GCC;
+static int  inch NO_INIT_GCC;
+static int  wgt  NO_INIT_GCC;
+static int  age  NO_INIT_GCC;
+static char sex  NO_INIT_GCC;
+static char string[20];
 
 int mode = 0;
 
@@ -143,12 +146,12 @@ void EXTI2_3_IRQHandler(void) {
     } else if(mode == 6) {
         LCD_DrawFillRectangle(0,214,319,239,WHITE);
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (HRS)--",16,0xff);
-        sprintf(string,"%2d:%2d",hour,minute);
+        sprintf(string,"%02d:%02d",hour,minute);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
     } else if(mode == 7) {
         LCD_DrawFillRectangle(0,214,319,239,WHITE);
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (MIN)--",16,0xff);
-        sprintf(string,"%2d:%2d",hour,minute);
+        sprintf(string,"%02d:%02d",hour,minute);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
 
     //If done editing, redraw entire thing
@@ -230,6 +233,7 @@ void EXTI0_1_IRQHandler(void) {
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HGT (FEET)--",16,0xff);
         sprintf(string,"%d'",ft);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+        RTC->BKP0R = ft;
     } else if(mode == 2) {
         inch += increment;
         //Keep values in the range [0,12)
@@ -241,6 +245,7 @@ void EXTI0_1_IRQHandler(void) {
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST HGT (INCH)--",16,0xff);
         sprintf(string,"%2d'",inch);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+        RTC->BKP1R = inch;
     } else if(mode == 3) {
         wgt += increment;
         if(wgt < 50)  //Keep values in range [50,600] to account for kids and
@@ -252,6 +257,7 @@ void EXTI0_1_IRQHandler(void) {
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST WGT--",16,0xff);
         sprintf(string,"%d lbs",wgt);
         LCD_DrawString(260,219,BLACK,BLACK,string,16,0xff);
+        RTC->BKP2R = wgt;
     } else if(mode == 4) {
         age += increment;
         if(age < 0)     //Limit ages to [0,110]
@@ -262,6 +268,7 @@ void EXTI0_1_IRQHandler(void) {
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST AGE--",16,0xff);
         sprintf(string,"%d yrs",age);
         LCD_DrawString(260,219,BLACK,BLACK,string,16,0xff);
+        RTC->BKP3R = age;
     } else if(mode == 5) {
         if(sex == 'M')
             sex = 'F';
@@ -271,6 +278,7 @@ void EXTI0_1_IRQHandler(void) {
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST SEX--",16,0xff);
         sprintf(string,"%c",sex);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
+        RTC->BKP4R = sex;
     } else if(mode == 6) {
         hour += increment;
         if(hour > 23)
@@ -279,7 +287,7 @@ void EXTI0_1_IRQHandler(void) {
             hour = 23;
         LCD_DrawFillRectangle(0,214,319,239,WHITE);
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (HRS)--",16,0xff);
-        sprintf(string,"%2d:%2d",hour,minute);
+        sprintf(string,"%02d:%02d",hour,minute);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
         //TimeHr
     } else if(mode == 7) {
@@ -291,7 +299,7 @@ void EXTI0_1_IRQHandler(void) {
             minute = 59;
         LCD_DrawFillRectangle(0,214,319,239,WHITE);
         LCD_DrawString(10,219,BLACK,BLACK,"--ADJUST TIME (MIN)--",16,0xff);
-        sprintf(string,"%2d:%2d",hour,minute);
+        sprintf(string,"%02d:%02d",hour,minute);
         LCD_DrawString(280,219,BLACK,BLACK,string,16,0xff);
     }
 
@@ -398,12 +406,13 @@ void init_tim6(void) {
 void TIM2_IRQHandler(void) {
 	TIM6->CR1 &= ~TIM_CR1_CEN;
     TIM2->SR &= ~TIM_SR_UIF; //Acknowledge Interrupt
-    nano_wait(100000000);
     if(minute != prev_minute | prev_spo2 != spo2 | prev_HR != HR | tempF != prev_tempF | prev_steps != steps | prev_EE_a != EE_a) {
+    	while(SPI1->SR & SPI_SR_BSY);
     	LCD_Setup();
     	LCD_Clear(BLACK);
 		sprintf(string,"%02d:%02d",hour,minute);
-		LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+		while(SPI1->SR & SPI_SR_BSY);
+		LCD_DrawString(10,10,WHITE,BLACK,string,16,0);
 
 		//Reset values at midnight
 		if(midnight()) {
@@ -444,6 +453,8 @@ void TIM2_IRQHandler(void) {
 		prev_tempF  = tempF;
 		prev_steps  = steps;
 		prev_EE_a   = EE_a;
+
+		//LCD_DrawString(0,239-32,WHITE,WHITE,"HELLO THERE",32,0xff);
     }
     TIM6->CR1 |=  TIM_CR1_CEN;
 }
@@ -497,6 +508,17 @@ void sdcard_io_high_speed() {
 //=============================================================================
 int main(void)
 {
+	//If a Power Cycle, give initial values
+	//Otherwise, the "noinit" attribute will keep values the same with reset
+	if(RCC->CSR & RCC_CSR_PORRSTF) {
+		ft   = 5;
+		inch = 11;
+		wgt  = 125;
+		age  = 20;
+		sex  = 'M';
+		RCC->CSR |= RCC_CSR_RMVF;
+	}
+
     LCD_Setup();
     LCD_Clear(BLACK);
 
@@ -510,6 +532,5 @@ int main(void)
     init_tim6();
     init_tim2();
     init_tim7();
-
 	while(1);
 }
