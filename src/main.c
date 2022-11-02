@@ -162,7 +162,7 @@ void EXTI2_3_IRQHandler(void) {
         LCD_Setup();
         LCD_Clear(BLACK);
         sprintf(string,"%02d:%02d",hour,minute);
-        LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+        LCD_DrawString(10,10,RED,BLACK,string,32,0xff);
 
         if(spo2 != -1) {
             sprintf(string,"SpO2:  %-3d   %%",spo2);
@@ -412,7 +412,7 @@ void TIM2_IRQHandler(void) {
     	LCD_Clear(BLACK);
 		sprintf(string,"%02d:%02d",hour,minute);
 		while(SPI1->SR & SPI_SR_BSY);
-		LCD_DrawString(10,10,WHITE,BLACK,string,16,0);
+		LCD_DrawString(10,10,RED,BLACK,string,32,0);
 
 		//Reset values at midnight
 		if(midnight()) {
@@ -430,7 +430,7 @@ void TIM2_IRQHandler(void) {
 		    LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
 		}
 
-		sprintf(string,"Temp:  %d.%d  degF",tempF/10,tempF%10);
+		sprintf(string,"Temp:  %d.%d  ^F",tempF/10,tempF%10);
 		LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
 
 		sprintf(string,"Steps: %-5d Steps",steps);
@@ -518,6 +518,16 @@ int main(void)
 		sex  = 'M';
 		RCC->CSR |= RCC_CSR_RMVF;
 	}
+	if(ft < 0 || ft>9)
+		ft = 5;
+	if(inch < 0 || inch > 11)
+		inch = 11;
+	if(wgt < 0 || wgt > 600)
+		wgt = 125;
+	if(age < 0 || age > 110)
+		age = 20;
+	if(sex != 'M' || sex != 'F')
+		sex = 'M';
 
     LCD_Setup();
     LCD_Clear(BLACK);
