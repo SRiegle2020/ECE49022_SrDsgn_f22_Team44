@@ -160,36 +160,64 @@ void EXTI2_3_IRQHandler(void) {
         set_hours(hour);
         set_minutes(minute);
         LCD_Setup();
-        LCD_Clear(BLACK);
+        LCD_Clear(0x18e4);
         sprintf(string,"%02d:%02d",hour,minute);
-        LCD_DrawString(10,10,RED,BLACK,string,32,0xff);
+        LCD_DrawString(104,96,0xf924,BLACK,string,48,0xff);
+
+        LCD_DrawFillRectangle(0, 0, 320, 6, 0xa65b);
+        LCD_DrawFillRectangle(0, 0, 6, 240, 0xa65b);
+        LCD_DrawFillRectangle(0, 234, 320, 240, 0xa65b);
+        LCD_DrawFillRectangle(314, 0, 320, 240, 0xa65b);
+
+        sprintf(string,"SpO2");
+        LCD_DrawString(10 + 112,10,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"HR");
+        LCD_DrawString(10 + 180,10,WHITE,WHITE,string,16,0xff);
 
         if(spo2 != -1) {
-            sprintf(string,"SpO2:  %-3d   %%",spo2);
-            LCD_DrawString(26,10+16,WHITE,WHITE,string,16,0xff);
-            sprintf(string,"HR:    %-3d   BPM",HR);
-            LCD_DrawString(26,10+32,WHITE,WHITE,string,16,0xff);
+            sprintf(string,"%-3d%%",spo2);
+            LCD_DrawString(10 + 112,10 + 16,WHITE,WHITE,string,16,0xff);
+            sprintf(string,"%-3d",HR);
+            LCD_DrawString(10 + 180,10+16,WHITE,WHITE,string,16,0xff);
         } else {
-            LCD_DrawString(26,10+16,WHITE,WHITE,"SpO2:  N/A",16,0xff);
-            LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
+            LCD_DrawString(10 + 112,10+16,WHITE,WHITE,"N/A",16,0xff);
+            LCD_DrawString(10 + 180,10+16,WHITE,WHITE,"N/A",16,0xff);
         }
 
-        sprintf(string,"Temp:  %d.%d degF",tempF/10,tempF%10);
-        LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"TEMP");
+        LCD_DrawString(10 + 235,10,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%d.%d^F",tempF/10,tempF%10);
+        LCD_DrawString(10 + 235,10 + 16,WHITE,WHITE,string,16,0xff);
 
-        sprintf(string,"Steps: %-5d Steps",steps);
-        LCD_DrawString(26,10+64,WHITE,WHITE,string,16,0xff);
-        sprintf(string,"EE:    %-4d  Cal",EE_a/100);            //Truncate to Int
-        LCD_DrawString(26,10+80,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"STEPS");
+        LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%-5d",steps);
+        LCD_DrawString(10,10+16,WHITE,WHITE,string,16,0xff);
 
-        sprintf(string,"Hgt: %d'%2d\"",ft,inch);
-        LCD_DrawString(26,10+112,WHITE,WHITE,string,16,0xff);
-        sprintf(string,"Wgt: %-3d lbs",wgt);
-        LCD_DrawString(26,10+126,WHITE,WHITE,string,16,0xff);
-        sprintf(string,"Age: %-3d yrs",age);
-        LCD_DrawString(26,10+142,WHITE,WHITE,string,16,0xff);
-        sprintf(string,"Sex: %c",sex);
-        LCD_DrawString(26,10+158,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"EE");            //Truncate to Int
+        LCD_DrawString(10 + 64,10,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%-4d",EE_a/100);
+        LCD_DrawString(10 + 64,10 + 16,WHITE,WHITE,string,16,0xff);
+
+        sprintf(string,"HEIGHT");
+        LCD_DrawString(100,213,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%d'%2d\"",ft,inch);
+        LCD_DrawString(100,197,WHITE,WHITE,string,16,0xff);
+
+        sprintf(string,"WEIGHT",wgt);
+        LCD_DrawString(10,213,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%-3dlbs",wgt);
+        LCD_DrawString(10,197,WHITE,WHITE,string,16,0xff);
+
+        sprintf(string,"Age");
+        LCD_DrawString(200,213,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%-3d",age);
+        LCD_DrawString(200,197,WHITE,WHITE,string,16,0xff);
+
+        sprintf(string,"Sex");
+        LCD_DrawString(280,213,WHITE,WHITE,string,16,0xff);
+        sprintf(string,"%c",sex);
+        LCD_DrawString(280,197,WHITE,WHITE,string,16,0xff);
 
         //Update previous values
         prev_minute = minute;
@@ -409,43 +437,71 @@ void TIM2_IRQHandler(void) {
     if(minute != prev_minute | prev_spo2 != spo2 | prev_HR != HR | tempF != prev_tempF | prev_steps != steps | prev_EE_a != EE_a) {
     	while(SPI1->SR & SPI_SR_BSY);
     	LCD_Setup();
-    	LCD_Clear(BLACK);
+    	LCD_Clear(0x18e4);
 		sprintf(string,"%02d:%02d",hour,minute);
 		while(SPI1->SR & SPI_SR_BSY);
-		LCD_DrawString(10,10,RED,BLACK,string,32,0);
+		LCD_DrawString(104,96,0xf924,BLACK,string,48,0xff);
+
+		LCD_DrawFillRectangle(0, 0, 320, 6, 0xa65b);
+		LCD_DrawFillRectangle(0, 0, 6, 240, 0xa65b);
+		LCD_DrawFillRectangle(0, 234, 320, 240, 0xa65b);
+		LCD_DrawFillRectangle(314, 0, 320, 240, 0xa65b);
 
 		//Reset values at midnight
 		if(midnight()) {
 		    steps = 0;
 		    EE_a  = 0;
 		}
+		sprintf(string,"SpO2");
+		LCD_DrawString(10 + 112,10,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"HR");
 
+		LCD_DrawString(10 + 180,10,WHITE,WHITE,string,16,0xff);
 		if(spo2 != -1) {
-			sprintf(string,"SpO2:  %-3d   %%",spo2);
-			LCD_DrawString(26,10+16,WHITE,WHITE,string,16,0xff);
-		    sprintf(string,"HR:    %-3d   BPM",HR);
-		    LCD_DrawString(26,10+32,WHITE,WHITE,string,16,0xff);
+			sprintf(string,"%-3d%%",spo2);
+			LCD_DrawString(10 + 112,10 + 16,WHITE,WHITE,string,16,0xff);
+		    sprintf(string,"%-3d",HR);
+		    LCD_DrawString(10 + 180,10+16,WHITE,WHITE,string,16,0xff);
 		} else {
-		    LCD_DrawString(26,10+16,WHITE,WHITE,"SpO2:  N/A",16,0xff);
-		    LCD_DrawString(26,10+32,WHITE,WHITE,"HR:    N/A",16,0xff);
+		    LCD_DrawString(10 + 112,10+16,WHITE,WHITE,"N/A",16,0xff);
+		    LCD_DrawString(10 + 180,10+16,WHITE,WHITE,"N/A",16,0xff);
 		}
 
-		sprintf(string,"Temp:  %d.%d  ^F",tempF/10,tempF%10);
-		LCD_DrawString(26,10+48,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"TEMP");
+		LCD_DrawString(10 + 235,10,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%d.%d^F",tempF/10,tempF%10);
+		LCD_DrawString(10 + 235,10 + 16,WHITE,WHITE,string,16,0xff);
 
-		sprintf(string,"Steps: %-5d Steps",steps);
-		LCD_DrawString(26,10+64,WHITE,WHITE,string,16,0xff);
-		sprintf(string,"EE:    %-4d  Cal",EE_a/100);            //Truncate to Int
-		LCD_DrawString(26,10+80,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"STEPS");
+		LCD_DrawString(10,10,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%-5d",steps);
+		LCD_DrawString(10,10+16,WHITE,WHITE,string,16,0xff);
 
-		sprintf(string,"Hgt: %d'%-2d\"",ft,inch);
-		LCD_DrawString(26,10+112,WHITE,WHITE,string,16,0xff);
-		sprintf(string,"Wgt: %-3d lbs",wgt);
-		LCD_DrawString(26,10+126,WHITE,WHITE,string,16,0xff);
-		sprintf(string,"Age: %-3d yrs",age);
-		LCD_DrawString(26,10+142,WHITE,WHITE,string,16,0xff);
-		sprintf(string,"Sex: %c",sex);
-		LCD_DrawString(26,10+158,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"EE");            //Truncate to Int
+		LCD_DrawString(10 + 64,10,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%-4d",EE_a/100);
+		LCD_DrawString(10 + 64,10 + 16,WHITE,WHITE,string,16,0xff);
+
+
+		sprintf(string,"HEIGHT");
+		LCD_DrawString(100,213,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%d'%2d\"",ft,inch);
+		LCD_DrawString(100,197,WHITE,WHITE,string,16,0xff);
+
+		sprintf(string,"WEIGHT",wgt);
+		LCD_DrawString(10,213,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%-3dlbs",wgt);
+		LCD_DrawString(10,197,WHITE,WHITE,string,16,0xff);
+
+		sprintf(string,"Age");
+		LCD_DrawString(200,213,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%-3d",age);
+		LCD_DrawString(200,197,WHITE,WHITE,string,16,0xff);
+
+		sprintf(string,"Sex");
+		LCD_DrawString(280,213,WHITE,WHITE,string,16,0xff);
+		sprintf(string,"%c",sex);
+		LCD_DrawString(280,197,WHITE,WHITE,string,16,0xff);
 
 		prev_minute = minute;
 		prev_spo2   = spo2;
