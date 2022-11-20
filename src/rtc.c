@@ -9,6 +9,12 @@
 
 #define WATCH_ADDR 0x68
 
+static inline void nano_wait(unsigned int n) {
+    asm(    "        mov r0,%0\n"
+            "repeat: sub r0,#83\n"
+            "        bgt repeat\n" : : "r"(n) : "r0", "cc");
+}
+
 //=============================================================================
 // WATCH_WRITE
 //  * Write data to the RTC.
@@ -137,7 +143,9 @@ void set_year(int year) {
 //=============================================================================
 void init_watch(void) {
     watch_write(0x00,0x00);                         //Reset
-    watch_write(0x02,0x40);                         //Standard Switch-Over, Low Detection Disabled
+    watch_write(0x02,0x80);                         //Standard Switch-Over, Low Detection Disabled
+
+
     int clear_oscflag = watch_read(0x03) &~ 0x80;   //Clear the Oscillator-STOP flag
     watch_write(0x03,clear_oscflag);
 
