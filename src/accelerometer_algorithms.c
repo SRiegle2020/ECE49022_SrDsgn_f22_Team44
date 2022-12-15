@@ -63,7 +63,7 @@ int detect_step(void) {
 	//accel_sample();
 
 	//Detect if a step is past the threshold at a strong rising edge
-    if(a_mag[0] > 1.03 && a_mag[1] < 1.03 && (a_mag[0]-a_mag[1]) > 0.05)
+    if(a_mag[0] > 1.2 && a_mag[1] < 1.2 && (a_mag[0]-a_mag[1]) > 0.02)
         return 1;
     return 0;
 }
